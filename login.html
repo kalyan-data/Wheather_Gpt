@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherGPT — Cloud Sign In & Meteorological Access</title>
+  <meta name="description" content="Sign in to WeatherGPT Meteorological Intelligence Platform backed by Supabase PostgreSQL.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/main.css">
+  
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #0d1e3d 0%, #060c1d 60%, #02050e 100%);
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+      z-index: 10;
+      animation: modalFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .login-card {
+      background: rgba(13, 22, 44, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 24px;
+      padding: 36px 32px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 50px rgba(0, 240, 255, 0.12);
+    }
+
+    .login-brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .login-logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(16, 185, 129, 0.25));
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin: 0 auto 14px auto;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.25);
+    }
+
+    .login-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .login-title .ai-tag {
+      font-size: 11px;
+      background: linear-gradient(135deg, var(--accent-cyan), #3b82f6);
+      color: #030712;
+      padding: 2px 8px;
+      border-radius: 10px;
+      vertical-align: middle;
+      margin-left: 6px;
+      font-weight: 700;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .db-live-pill {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #34d399;
+      margin: 16px auto 24px auto;
+      width: fit-content;
+      font-weight: 600;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .db-live-pill.offline {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+
+    .demo-creds-box {
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px dashed rgba(0, 240, 255, 0.3);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+
+    .btn-quick-fill {
+      background: rgba(0, 240, 255, 0.2);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: var(--accent-cyan);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-quick-fill:hover {
+      background: var(--accent-cyan);
+      color: #030712;
+    }
+
+    .login-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: #030712;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .feedback-banner {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      margin-bottom: 18px;
+      display: none;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+
+    .feedback-banner.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .feedback-banner.success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .input-field-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 15px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(7, 12, 28, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px 12px 42px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+      font-family: var(--font-body);
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-select {
+      width: 100%;
+      background: rgba(7, 12, 28, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+
+    .form-select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .form-select option {
+      background: #070c1c;
+      color: #fff;
+    }
+
+    .btn-submit-action {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
+      border: none;
+      color: #030712;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 8px;
+      box-shadow: 0 4px 20px rgba(0, 240, 255, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-submit-action:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 240, 255, 0.5);
+    }
+
+    .btn-submit-action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .divider-or {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .divider-or::before,
+    .divider-or::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .divider-or span {
+      padding: 0 10px;
+    }
+
+    .btn-guest-link {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #94a3b8;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .btn-guest-link:hover {
+      background: rgba(0, 240, 255, 0.08);
+      border-color: rgba(0, 240, 255, 0.35);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Atmospheric Background Canvas -->
+  <canvas id="bgAtmosphereCanvas" style="position:fixed; inset:0; z-index:1; pointer-events:none;"></canvas>
+
+  <div class="login-container">
+    <div class="login-card">
+      
+      <!-- Brand Section -->
+      <div class="login-brand-header">
+        <div class="login-logo">🌦️</div>
+        <h1 class="login-title">WeatherGPT <span class="ai-tag">CLOUD</span></h1>
+        <p class="login-subtitle">Meteorological Intelligence & Decision-Support</p>
+      </div>
+
+      <!-- Live Database Status -->
+      <div id="dbStatusBadge" class="db-live-pill">
+        <span class="status-dot online"></span>
+        <span id="dbStatusText">Supabase PostgreSQL: Connected</span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="login-tabs">
+        <button type="button" class="tab-btn active" id="tabBtnLogin">Sign In</button>
+        <button type="button" class="tab-btn" id="tabBtnRegister">Create Account</button>
+      </div>
+
+      <!-- Feedback Banner -->
+      <div id="feedbackBanner" class="feedback-banner"></div>
+
+      <!-- Sign In Form -->
+      <form id="formSignIn">
+        <div class="form-group">
+          <label for="inputEmail">Email Address</label>
+          <div class="input-field-wrapper">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="inputEmail" class="form-input" placeholder="name@example.com" required autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inputPassword">Password</label>
+          <div class="input-field-wrapper">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="inputPassword" class="form-input" placeholder="••••••••••••" required autocomplete="current-password" />
+          </div>
+        </div>
+
+        <button type="submit" id="btnSubmitLogin" class="btn-submit-action">
+          <span>⚡ Sign In with Supabase</span>
+        </button>
+
+        <div class="divider-or"><span>OR</span></div>
+
+        <a href="index.html" class="btn-guest-link">
+          <span>Continue as Guest Preview →</span>
+        </a>
+      </form>
+
+      <!-- Register Form -->
+      <form id="formRegister" style="display: none;">
+        <div class="form-group">
+          <label for="regName">Full Name / Title</label>
+          <div class="input-field-wrapper">
+            <span class="input-icon">👤</span>
+            <input type="text" id="regName" class="form-input" placeholder="Dr. Kalyan" required autocomplete="name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <div class="input-field-wrapper">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="regEmail" class="form-input" placeholder="your.name@meteorology.org" required autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Password (Min. 6 Characters)</label>
+          <div class="input-field-wrapper">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="regPassword" class="form-input" placeholder="Create strong password" minlength="6" required autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-row-2 form-group">
+          <div>
+            <label for="regLocation">Default Base City</label>
+            <select id="regLocation" class="form-select">
+              <option value="Bengaluru" selected>Bengaluru</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="New Delhi">New Delhi</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Chennai">Chennai</option>
+              <option value="Kolkata">Kolkata</option>
+              <option value="Pune">Pune</option>
+              <option value="Ahmedabad">Ahmedabad</option>
+              <option value="Jaipur">Jaipur</option>
+              <option value="Kochi">Kochi</option>
+              <option value="Shimla">Shimla</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="regLanguage">Preferred Language</label>
+            <select id="regLanguage" class="form-select">
+              <option value="en" selected>English</option>
+              <option value="hi">हिन्दी (Hindi)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="ta">தமிழ் (Tamil)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+              <option value="ml">മലയാളം (Malayalam)</option>
+              <option value="mr">मराठी (Marathi)</option>
+              <option value="bn">বাংলা (Bengali)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="btnSubmitRegister" class="btn-submit-action">
+          <span>🚀 Create Meteorological Account</span>
+        </button>
+
+        <div class="divider-or"><span>OR</span></div>
+
+        <a href="index.html" class="btn-guest-link">
+          <span>Continue as Guest Preview →</span>
+        </a>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    // Universal API base resolving both http://localhost:5173 and file:/// URLs
+    const API_BASE = (window.location.protocol === 'file:' || !window.location.origin.includes('5173'))
+      ? 'http://localhost:5173'
+      : '';
+
+    const tabBtnLogin = document.getElementById('tabBtnLogin');
+    const tabBtnRegister = document.getElementById('tabBtnRegister');
+    const formSignIn = document.getElementById('formSignIn');
+    const formRegister = document.getElementById('formRegister');
+    const feedbackBanner = document.getElementById('feedbackBanner');
+    const dbStatusBadge = document.getElementById('dbStatusBadge');
+    const dbStatusText = document.getElementById('dbStatusText');
+
+    function showFeedback(type, message) {
+      feedbackBanner.className = 'feedback-banner ' + type;
+      feedbackBanner.textContent = message;
+      feedbackBanner.style.display = 'block';
+    }
+
+    function switchTab(tab) {
+      feedbackBanner.style.display = 'none';
+      if (tab === 'login') {
+        tabBtnLogin.classList.add('active');
+        tabBtnRegister.classList.remove('active');
+        formSignIn.style.display = 'block';
+        formRegister.style.display = 'none';
+      } else {
+        tabBtnLogin.classList.remove('active');
+        tabBtnRegister.classList.add('active');
+        formSignIn.style.display = 'none';
+        formRegister.style.display = 'block';
+      }
+    }
+
+    tabBtnLogin.addEventListener('click', () => switchTab('login'));
+    tabBtnRegister.addEventListener('click', () => switchTab('register'));
+
+    // Check Supabase PostgreSQL Health
+    async function checkDb() {
+      try {
+        const res = await fetch(`${API_BASE}/api/db/health`);
+        const data = await res.json();
+        if (data.status === 'connected') {
+          dbStatusBadge.className = 'db-live-pill';
+          dbStatusText.textContent = `Supabase PostgreSQL: Connected (${data.stats.total_users} Users)`;
+        } else {
+          dbStatusBadge.className = 'db-live-pill offline';
+          dbStatusText.textContent = 'Supabase DB: Connecting...';
+        }
+      } catch (err) {
+        dbStatusBadge.className = 'db-live-pill offline';
+        dbStatusText.textContent = 'Supabase DB: Connecting to backend...';
+      }
+    }
+
+    checkDb();
+
+    // Check if user is already logged in
+    async function checkExistingAuth() {
+      const token = localStorage.getItem('weathergpt_auth_token');
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          showFeedback('success', `Already signed in as ${data.user.name}. Redirecting to dashboard...`);
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 900);
+        }
+      } catch (e) {}
+    }
+
+    checkExistingAuth();
+
+    // Login Form Submit
+    formSignIn.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('inputEmail').value.trim();
+      const password = document.getElementById('inputPassword').value;
+      const btnSubmit = document.getElementById('btnSubmitLogin');
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>⏳ Authenticating with Supabase...</span>';
+      feedbackBanner.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Authentication failed. Please check credentials.');
+        }
+
+        localStorage.setItem('weathergpt_auth_token', data.token);
+        showFeedback('success', `Welcome back, ${data.user.name}! Redirecting to live meteorological dashboard...`);
+
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 800);
+
+      } catch (err) {
+        showFeedback('error', err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>⚡ Sign In with Supabase</span>';
+      }
+    });
+
+    // Register Form Submit
+    formRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const preferred_location = document.getElementById('regLocation').value;
+      const preferred_language = document.getElementById('regLanguage').value;
+      const btnSubmit = document.getElementById('btnSubmitRegister');
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>⏳ Creating Account in Supabase...</span>';
+      feedbackBanner.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            preferred_location,
+            preferred_language,
+            role: 'Meteorologist'
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Registration failed.');
+        }
+
+        localStorage.setItem('weathergpt_auth_token', data.token);
+        showFeedback('success', `Account created successfully in Supabase! Welcome, ${data.user.name}. Redirecting...`);
+
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
+
+      } catch (err) {
+        showFeedback('error', err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>🚀 Create Meteorological Account</span>';
+      }
+    });
+  </script>
+</body>
+</html>

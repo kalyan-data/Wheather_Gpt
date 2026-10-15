@@ -1,0 +1,1 @@
+WeatherGPT project root directory. All system modules are initialized in index.html, css/, and js/.

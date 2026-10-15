@@ -1,0 +1,18 @@
+{
+  "name": "wheather_gpt",
+  "version": "1.0.0",
+  "description": "> **Not just a weather app — an AI system that understands the atmosphere, explains root causes, predicts hazards, visualizes satellite data, and recommends actionable decisions.**",
+  "main": "verify_fixes.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "pg": "^8.23.0"
+  }
+}

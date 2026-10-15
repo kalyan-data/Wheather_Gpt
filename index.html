@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherGPT — AI Meteorological Intelligence & Decision-Support Platform</title>
+  <meta name="description" content="AI-powered meteorological intelligence platform integrating live multi-model NWP consensus, Doppler radar, satellite imagery, explainable AI diagnostics, and personalized decision support.">
+  <meta name="keywords" content="WeatherGPT, AI meteorology, weather prediction, Doppler radar, satellite weather, climate analytics, Indian monsoon, decision support">
+
+  <!-- Google Fonts Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- WeatherGPT Modular CSS -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/chat.css">
+  <link rel="stylesheet" href="css/disaster.css">
+  <link rel="stylesheet" href="css/decision.css">
+  <link rel="stylesheet" href="css/climate.css">
+</head>
+<body>
+  <!-- Dynamic Atmospheric Particle Canvas Background -->
+  <canvas id="bgAtmosphereCanvas"></canvas>
+
+  <!-- Global App Loader -->
+  <div id="globalAppLoader" class="app-loader-overlay" style="display: none;">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">SYNCHRONIZING METEOROLOGICAL TELEMETRY...</div>
+  </div>
+
+  <div class="app-shell">
+    <!-- Top Global Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo-badge">🌦️</div>
+        <div class="brand-info">
+          <h1>WeatherGPT <span class="ai-tag">AI CORE</span></h1>
+          <span class="brand-tagline">Meteorological Intelligence Platform</span>
+        </div>
+      </div>
+
+      <!-- Location Search & Live GPS -->
+      <div class="location-search-section">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="locationSearchInput" class="search-input" placeholder="Search city, district, or coordinates..." autocomplete="off">
+          <button id="btnMyLocation" class="btn-my-location" title="Detect GPS Location">
+            <span>📍</span> <span data-i18n="myLocation">My Location</span>
+          </button>
+        </div>
+        <div id="locationSuggestions" class="suggestions-dropdown"></div>
+      </div>
+
+      <!-- Header Controls: Voice, Language, Disaster Mode -->
+      <div class="header-actions">
+        <button id="btnVoiceTrigger" class="btn-voice-trigger" title="Speak to WeatherGPT">
+          <span>🎙️</span> <span>Voice AI</span>
+        </button>
+
+        <div class="language-selector-wrapper">
+          <select id="headerLanguageSelect" aria-label="Select Language">
+            <option value="en">English</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+            <option value="te">తెలుగు (Telugu)</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            <option value="ml">മലയാളം (Malayalam)</option>
+            <option value="mr">मराठी (Marathi)</option>
+            <option value="bn">বাংলা (Bengali)</option>
+          </select>
+        </div>
+
+        <!-- Supabase Cloud Authentication Widget -->
+        <div id="headerAuthContainer" class="header-auth-container"></div>
+
+        <button id="btnDisasterModeToggle" class="btn-disaster-toggle" title="Toggle Disaster Emergency Mode">
+          <span>🚨</span> <span data-i18n="disasterMode">Disaster Mode</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Navigation Bar -->
+    <nav class="app-nav-bar" aria-label="Primary Navigation">
+      <button class="nav-tab-btn active" data-tab="dashboard">
+        <span>🏠</span> <span data-i18n="dashboard">Dashboard</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="map">
+        <span>🗺️</span> <span data-i18n="liveMap">Live Weather Map</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="chat">
+        <span>🤖</span> <span data-i18n="weatherGpt">WeatherGPT AI</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="disaster">
+        <span>⚠️</span> <span data-i18n="earlyWarning">Early Warning & Disaster</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="decision">
+        <span>🎯</span> <span data-i18n="decisionSupport">Impact On Me</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="climate">
+        <span>📊</span> <span data-i18n="climateAnalytics">Climate & Research</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="knowledge">
+        <span>📚</span> <span data-i18n="knowledge">Knowledge & Sources</span>
+      </button>
+    </nav>
+
+    <!-- Location Status Subheader -->
+    <div class="location-status-banner">
+      <div class="loc-left">
+        <span id="currentLocationTitle" class="loc-title">Bengaluru, India</span>
+        <span id="currentCoordinatesDisplay" class="loc-coords">12.9716°N, 77.5946°E • 920m ASL</span>
+      </div>
+      <div id="headerLiveBadge" class="live-badge">
+        <span class="beacon-dot"></span> SYNOPTIC STATION
+      </div>
+    </div>
+
+    <!-- Main Content Tab Views -->
+    <main class="app-main-content">
+      
+      <!-- ================= TAB 1: DASHBOARD ================= -->
+      <section id="tab-dashboard" class="tab-view-section" style="display: block;">
+        <div class="dashboard-layout-grid">
+          
+          <!-- Main Column -->
+          <div class="dash-main-col">
+            
+            <!-- Feature #1: AI Meteorological Briefing & Feature #9: Confidence Score -->
+            <div class="glass-panel ai-briefing-card">
+              <div class="briefing-header">
+                <div class="briefing-title-meta">
+                  <span class="ai-pulse-icon">🧠</span>
+                  <h3 data-i18n="aiBriefingTitle">AI Meteorological Briefing</h3>
+                  <span class="ai-tag">SYNTHESIZED</span>
+                </div>
+              </div>
+              <div class="briefing-body">
+                <p id="aiBriefingContent">Atmospheric parameters are currently synchronizing...</p>
+              </div>
+
+              <!-- Feature #9: Weather Confidence Score -->
+              <div class="confidence-gauge-box">
+                <div class="confidence-meta">
+                  <span data-i18n="confidenceScore">Forecast Confidence Score:</span>
+                  <span id="dashConfidenceScore" class="confidence-score-val">87%</span>
+                </div>
+                <div class="confidence-progress-track">
+                  <div id="dashConfidenceBar" class="confidence-progress-fill" style="width: 87%;"></div>
+                </div>
+                <div id="dashConfidenceText" class="confidence-explanation">
+                  HIGH — Strong synoptic alignment across ECMWF, GFS, and IMD NWP models.
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Current Weather Telemetry Card -->
+            <div class="glass-panel current-hero-card">
+              <div class="hero-main-row">
+                <div class="hero-temp-box">
+                  <div class="hero-temp-readout">
+                    <span id="dashCurrentTemp" class="temp-number">26</span>
+                    <span class="temp-unit">°C</span>
+                  </div>
+                  <div id="dashCurrentCondition" class="hero-condition-text">Partly Cloudy</div>
+                  <div id="dashFeelsLike" class="hero-feels-like">Feels like 27°C</div>
+                </div>
+
+                <div class="hero-risks-cluster">
+                  <div id="dashRiskBadges" class="risk-badges-container">
+                    <span class="risk-badge risk-low"><span>✅</span> Optimal Weather Window</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Atmospheric Metrics 4x Grid -->
+              <div class="metrics-grid-4x">
+                <div class="metric-card-pill">
+                  <span class="metric-label">💧 Humidity</span>
+                  <span id="metricHumidity" class="metric-val">68%</span>
+                  <span id="metricDewPoint" class="metric-sub">Dew Point: 20°C</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">🌧️ Rain Prob</span>
+                  <span id="metricRainProb" class="metric-val">45%</span>
+                  <span class="metric-sub">Doppler Reflectivity active</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">💨 Wind & Gusts</span>
+                  <span id="metricWind" class="metric-val">14 km/h WSW</span>
+                  <span id="metricGusts" class="metric-sub">Gusts up to 22 km/h</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">🌫️ Air Quality</span>
+                  <span id="metricAqi" class="metric-val">78 AQI</span>
+                  <span id="metricAqiCat" class="metric-sub">Moderate</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">🧭 Barometric</span>
+                  <span id="metricPressure" class="metric-val">1012 hPa</span>
+                  <span class="metric-sub">Steady surface ridge</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">☀️ UV Radiation</span>
+                  <span id="metricUv" class="metric-val">5 / 11</span>
+                  <span class="metric-sub">Moderate sun index</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">🌅 Sunrise</span>
+                  <span id="metricSunrise" class="metric-val">06:05 AM</span>
+                  <span class="metric-sub">Dawn twilight</span>
+                </div>
+                <div class="metric-card-pill">
+                  <span class="metric-label">🌇 Sunset</span>
+                  <span id="metricSunset" class="metric-val">06:32 PM</span>
+                  <span class="metric-sub">Dusk twilight</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feature #6: AI Rain Prediction & Nowcasting -->
+            <div class="glass-panel rain-nowcast-card">
+              <div class="nowcast-head">
+                <div class="section-title-box" style="margin-bottom:0">
+                  <h2 data-i18n="nowcastTitle">🌧️ AI Rain Prediction & Nowcasting</h2>
+                </div>
+                <span id="nowcastStatus" class="nowcast-status-badge">Rain Expected in ~45 Minutes</span>
+              </div>
+              <p id="nowcastDescription" style="font-size:13px; color:#cbd5e1; margin-top:6px;">
+                Doppler radar reflectivity echoes indicate rain convective system tracking towards your coordinates.
+              </p>
+
+              <div class="nowcast-meta-row">
+                <div class="nowcast-meta-item">
+                  <span>Forecast Confidence</span>
+                  <strong id="nowcastConfidence">High (88%)</strong>
+                </div>
+                <div class="nowcast-meta-item">
+                  <span>Expected Duration</span>
+                  <strong id="nowcastDuration">1.5 – 2 hours</strong>
+                </div>
+                <div class="nowcast-meta-item">
+                  <span>Intensity & Depth</span>
+                  <strong id="nowcastIntensity">Moderate Showers (~12mm)</strong>
+                </div>
+              </div>
+
+              <!-- 15-Minute Interval Rain Curve Bars -->
+              <div class="nowcast-bars-wrapper">
+                <small style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted)">NOWCAST PRECIPITATION PROBABILITY CURVE (NEXT 2 HOURS)</small>
+                <div id="nowcastBarsContainer" class="nowcast-bars-grid"></div>
+              </div>
+            </div>
+
+            <!-- Feature #11: Hourly Atmospheric Scrubber -->
+            <div class="glass-panel hourly-scrubber-card">
+              <div class="section-title-box">
+                <div>
+                  <h2 data-i18n="hourlyForecast">⏱️ Hourly Atmospheric Scrubber</h2>
+                  <small class="hourly-hint">Scroll wheel, drag, or use arrows to view all 24 hours</small>
+                </div>
+                <div class="hourly-scroll-nav-btns">
+                  <button id="btnScrollHourlyLeft" class="btn-hourly-nav" title="Scroll Left" aria-label="Scroll Left">◀</button>
+                  <button id="btnScrollHourlyRight" class="btn-hourly-nav" title="Scroll Right" aria-label="Scroll Right">▶</button>
+                </div>
+              </div>
+              <div id="hourlyScrubberContainer" class="hourly-chips-scroll" tabindex="0" role="region" aria-label="Hourly Forecast Timeline"></div>
+            </div>
+
+
+          </div>
+
+          <!-- Side Column -->
+          <div class="dash-side-col">
+            
+            <!-- Feature #8: "Why?" WeatherGPT Root-Cause Diagnostic -->
+            <div class="glass-panel why-diagnostic-card">
+              <div class="why-header-row">
+                <div class="section-title-box" style="margin-bottom:0">
+                  <h2 data-i18n="whyTitle">🧠 “Why?” WeatherGPT</h2>
+                </div>
+                <div class="mode-toggle-group">
+                  <button id="btnModeSimple" class="mode-toggle-btn active" data-i18n="simpleMode">Plain English</button>
+                  <button id="btnModeTech" class="mode-toggle-btn" data-i18n="technicalMode">Technical</button>
+                </div>
+              </div>
+              
+              <h3 id="whySummaryTitle" style="font-size:14px; color:var(--accent-cyan); margin-top:8px;">Why are we experiencing these conditions today?</h3>
+              <p id="whyExecutiveSummary" style="font-size:12.5px; color:#cbd5e1; margin-top:4px;">
+                Atmospheric conditions are driven by strong tropospheric moisture advection.
+              </p>
+
+              <div id="whyFactorsList" class="why-factors-list"></div>
+            </div>
+
+            <!-- Feature #10: Multi-Model Forecast Intelligence (NWP) -->
+            <div class="glass-panel multi-model-card">
+              <div class="section-title-box">
+                <h2 data-i18n="multiModelTitle">🛰️ Multi-Model Consensus (NWP)</h2>
+              </div>
+              
+              <div class="consensus-summary-pill">
+                <div>
+                  <strong id="consensusRain">Moderate Rain Probability</strong>
+                  <div id="consensusStatus" style="font-size:11px; color:var(--text-secondary)">Synthesizing 4 major forecast datasets</div>
+                </div>
+                <span id="consensusAgreement" class="consensus-agree-badge">86% Agreement</span>
+              </div>
+
+              <div id="nwpModelList" class="nwp-models-list"></div>
+            </div>
+
+            <!-- Feature #11: 7-Day Synoptic Outlook -->
+            <div class="glass-panel">
+              <div class="section-title-box">
+                <h2 data-i18n="sevenDayForecast">📅 7-Day Synoptic Outlook</h2>
+              </div>
+              <div id="sevenDayForecastContainer" class="seven-day-list"></div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 2: LIVE WEATHER & SATELLITE MAP ================= -->
+      <section id="tab-map" class="tab-view-section">
+        <div class="map-view-layout">
+          
+          <!-- Map Floating Controls & Layer Selector -->
+          <div class="map-control-floating-bar">
+            <div class="map-layer-selector-group">
+              <button class="map-layer-btn active" data-layer="radar">🌧️ Rain Radar</button>
+              <button class="map-layer-btn" data-layer="satellite">🛰️ Satellite IR</button>
+              <button class="map-layer-btn" data-layer="clouds">☁️ Cloud Cover</button>
+              <button class="map-layer-btn" data-layer="precipitation">💧 Precipitation</button>
+              <button class="map-layer-btn" data-layer="temp">🌡️ Temperature</button>
+              <button class="map-layer-btn" data-layer="wind">💨 Wind Flow</button>
+              <button class="map-layer-btn" data-layer="risk">⚠️ Risk Zones</button>
+            </div>
+
+            <div class="map-special-actions">
+              <!-- Feature: Map Zoom & Recenter Controls -->
+              <div class="map-zoom-group">
+                <button type="button" id="btnMapZoomIn" class="btn-map-zoom" title="Zoom In (+)">➕</button>
+                <button type="button" id="btnMapZoomOut" class="btn-map-zoom" title="Zoom Out (-)">➖</button>
+                <button type="button" id="btnMapRecenter" class="btn-map-zoom" title="Recenter on Active Location">🎯 Fit</button>
+                <span id="mapZoomLevelBadge" class="zoom-level-badge" title="Current Zoom Level">9x</span>
+              </div>
+
+              <!-- Feature #4: Satellite Toggle -->
+              <button id="btnSatelliteToggle" class="btn-sat-toggle">
+                <span>🛰️</span> <span>Satellite View</span>
+              </button>
+              <button id="btnRefreshSatellite" class="btn-icon-refresh" title="Refresh Latest Satellite Feed">
+                🔄
+              </button>
+            </div>
+          </div>
+
+          <!-- Map Frame with Canvas Overlay -->
+          <div class="map-canvas-container">
+            <div id="weatherMapContainer"></div>
+            <canvas id="windStreamlineCanvas"></canvas>
+
+            <!-- Real-Time Doppler Radar Reflectivity Legend (Windy / AccuWeather style) -->
+            <div id="radarLegendCard" class="radar-legend-card">
+              <div class="radar-legend-header">
+                <span class="rl-title">🌧️ Live Radar Reflectivity</span>
+                <span class="rl-live-dot">● Real Doppler Echoes</span>
+              </div>
+              <div class="radar-legend-bar"></div>
+              <div class="radar-legend-labels">
+                <span>15 dBZ Light</span>
+                <span>30 Mod</span>
+                <span>45 Heavy</span>
+                <span>60+ Downpour</span>
+              </div>
+            </div>
+
+            <!-- Feature #4: Satellite Details HUD Overlay -->
+            <div class="satellite-hud-card">
+              <span class="sat-hud-title">🛰️ Latest Satellite Imagery</span>
+              <span class="sat-hud-meta">Sensor: INSAT-3DR Multispectral IR</span>
+              <span class="sat-hud-meta">Pass Time: <strong id="satelliteTimestampDisplay">Syncing...</strong></span>
+              <span class="sat-hud-meta">Resolution: 1km Visible / 4km IR</span>
+            </div>
+
+            <!-- Feature #5: Time Slider & Radar Scrubber Dock -->
+            <div class="map-time-slider-dock">
+              <div class="slider-top-meta">
+                <div class="radar-playback-controls">
+                  <button id="btnRadarPlay" class="btn-radar-play">▶ Play Radar</button>
+                  <span id="radarTimestampDisplay" class="radar-timestamp-label">Live Radar Sync</span>
+                </div>
+                
+                <div class="time-presets-group">
+                  <button class="time-preset-chip active" data-hours="0">NOW</button>
+                  <button class="time-preset-chip" data-hours="1">+1 HR</button>
+                  <button class="time-preset-chip" data-hours="2">+2 HR</button>
+                  <button class="time-preset-chip" data-hours="3">+3 HR</button>
+                  <button class="time-preset-chip" data-hours="6">+6 HR</button>
+                  <button class="time-preset-chip" data-hours="12">+12 HR</button>
+                  <button class="time-preset-chip" data-hours="24">+24 HR</button>
+                </div>
+              </div>
+
+              <div class="map-slider-track-box">
+                <input type="range" id="mapTimeSlider" class="range-slider" min="0" max="24" step="1" value="0">
+                <div id="mapCurrentTimeDisplay" class="slider-time-indicator">
+                  <span class="pulse-red">●</span> LIVE NOW
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: WEATHERGPT AI CHATBOT ================= -->
+      <section id="tab-chat" class="tab-view-section">
+        <div class="chat-view-layout">
+          
+          <div id="chatMessagesScroll" class="chat-messages-container">
+            <!-- Messages rendered dynamically -->
+          </div>
+
+          <!-- Typing Indicator -->
+          <div id="chatTypingIndicator" class="typing-indicator-box" style="display: none;">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <span>WeatherGPT AI is reasoning through atmospheric parameters...</span>
+          </div>
+
+          <!-- Sticky Chat Input Bar -->
+          <div class="chat-input-dock">
+            <input type="text" id="chatTextInput" class="chat-text-input" placeholder="Ask WeatherGPT: 'Will it rain at 6 PM?', 'Why is it hot?', 'Can I travel?'..." autocomplete="off">
+            <button id="btnSendChat" class="btn-chat-send">
+              <span>Send</span> <span>➤</span>
+            </button>
+            <button id="btnClearChat" class="btn-chat-clear" title="Clear Conversation">Clear</button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: EARLY WARNING & DISASTER ================= -->
+      <section id="tab-disaster" class="tab-view-section">
+        <div class="glass-panel" style="margin-bottom: 24px;">
+          <div class="section-title-box">
+            <h2>⚠️ AI Early Warning & Severe Meteorological Risk Matrix</h2>
+          </div>
+          <p style="font-size:13.5px; color:#cbd5e1; margin-bottom:18px;">
+            Continuously monitors 8 severe disaster vectors: Flash floods, cyclonic depressions, severe thunderstorms & lightning, squall winds, extreme heatwaves, ground frost, hazardous AQI, and river catchment overflows.
+          </p>
+
+          <div id="earlyWarningList" class="early-warning-grid"></div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: "IMPACT ON ME" DECISION SUPPORT ================= -->
+      <section id="tab-decision" class="tab-view-section">
+        <div class="decision-layout">
+          
+          <!-- Persona Selector Buttons -->
+          <div class="persona-selector-bar">
+            <button class="persona-btn active" data-persona="farmer">🌾 Agriculture (Kisan AI)</button>
+            <button class="persona-btn" data-persona="traveler">🚗 Road & Travel</button>
+            <button class="persona-btn" data-persona="commuter">🚶 Daily Commute</button>
+            <button class="persona-btn" data-persona="outdoor">🏃 Outdoor Sports</button>
+            <button class="persona-btn" data-persona="clothing">👕 Clothing & Lifestyle</button>
+            <button class="persona-btn" data-persona="aviation">✈️ Aviation & Drones</button>
+            <button class="persona-btn" data-persona="smartCity">🏙️ Smart City Operations</button>
+          </div>
+
+          <!-- Decision Hero Card -->
+          <div class="glass-panel decision-hero-card">
+            <div class="decision-header-row">
+              <h3 id="decisionPersonaTitle">🌾 AI Agriculture Advisor (Kisan AI)</h3>
+              <span id="decisionOverallBadge" class="decision-score-badge">FAVORABLE</span>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div id="decisionMetricsGrid" class="decision-metrics-grid"></div>
+
+            <!-- Actionable Protective Checklist -->
+            <div class="decision-checklist-box">
+              <h4>📋 High-Priority Operational Action Checklist</h4>
+              <ul id="decisionActionChecklist"></ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 6: CLIMATE & RESEARCH STUDIO ================= -->
+      <section id="tab-climate" class="tab-view-section">
+        <div class="climate-layout-grid">
+          
+          <!-- Real-Time Atmospheric Research Telemetry HUD -->
+          <div class="glass-panel climate-research-hud-panel">
+            <div class="section-title-box">
+              <div>
+                <h2>🔬 Real-Time Atmospheric Research & Telemetry Diagnostics</h2>
+                <small class="text-muted">Real-time thermodynamic, microclimatic, and aerodynamic research metrics computed directly from active weather observations.</small>
+              </div>
+              <span id="researchLiveBadge" class="research-live-badge"><span class="beacon-pulse"></span> LIVE SENSOR TELEMETRY</span>
+            </div>
+            
+            <div class="research-hud-grid">
+              <!-- VPD Card -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">💧</span>
+                  <span class="rh-title">Vapor Pressure Deficit (VPD)</span>
+                </div>
+                <strong id="rhVpdValue" class="rh-value">-- kPa</strong>
+                <span id="rhVpdRating" class="rh-status-tag">Calculating...</span>
+                <small id="rhVpdNote" class="rh-note">Evaporative demand & plant canopy moisture exchange.</small>
+              </div>
+
+              <!-- Dewpoint Depression Card -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">☁️</span>
+                  <span class="rh-title">Dewpoint Depression (T - Td)</span>
+                </div>
+                <strong id="rhDewDepValue" class="rh-value">--°C</strong>
+                <span id="rhLclTag" class="rh-status-tag">LCL ~-- m</span>
+                <small id="rhDewDepNote" class="rh-note">Lifting Condensation Level and low-cloud ceiling.</small>
+              </div>
+
+              <!-- Thermal Departure Anomaly Card -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">🌡️</span>
+                  <span class="rh-title">Observed Thermal Anomaly</span>
+                </div>
+                <strong id="rhThermalAnomalyValue" class="rh-value">--°C</strong>
+                <span id="rhAnomalyRating" class="rh-status-tag">Baseline --°C</span>
+                <small id="rhAnomalyNote" class="rh-note">Real-time departure from 30-year seasonal normal.</small>
+              </div>
+
+              <!-- Boundary Layer Dispersion Card -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">🌪️</span>
+                  <span class="rh-title">Boundary Layer Dispersion</span>
+                </div>
+                <strong id="rhDispersionValue" class="rh-value">--</strong>
+                <span id="rhAqiTag" class="rh-status-tag">AQI --</span>
+                <small id="rhDispersionNote" class="rh-note">Atmospheric ventilation & particulate dilution.</small>
+              </div>
+
+              <!-- Barometric Pressure & Tendency -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">🧭</span>
+                  <span class="rh-title">Barometric Sea-Level Field</span>
+                </div>
+                <strong id="rhPressureValue" class="rh-value">-- hPa</strong>
+                <span id="rhPressureRating" class="rh-status-tag">Synoptically Balanced</span>
+                <small id="rhPressureNote" class="rh-note">Atmospheric mass density across regional station grid.</small>
+              </div>
+
+              <!-- Köppen-Geiger Microclimate Classification -->
+              <div class="research-hud-card">
+                <div class="rh-head">
+                  <span class="rh-icon">🌍</span>
+                  <span class="rh-title">Köppen Microclimate Code</span>
+                </div>
+                <strong id="rhKoeppenCode" class="rh-value">Aw</strong>
+                <span id="rhKoeppenName" class="rh-status-tag">Tropical Savanna</span>
+                <small id="rhKoeppenZone" class="rh-note">Regional biome & thermodynamic classification.</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 10-Year Climate Trends Panel -->
+          <div class="glass-panel climate-trend-panel">
+            <div class="section-title-box">
+              <h2 id="climateCityTitle">📈 10-Year Climate Trends (2016–2026)</h2>
+              <button id="btnExportClimateCsv" class="btn-export-csv">
+                <span>📥</span> <span>Export Research Dataset (CSV)</span>
+              </button>
+            </div>
+
+            <div class="trend-chart-box">
+              <div id="climateTrendChart"></div>
+            </div>
+
+            <div id="climateAiAnalysisText" class="climate-analysis-content"></div>
+          </div>
+
+          <!-- Tracked Locations Research Archive & Real-Time Data Stream -->
+          <div class="glass-panel tracked-locations-panel">
+            <div class="section-title-box">
+              <div>
+                <h2>📡 Tracked Locations Research Archive & Data Stream</h2>
+                <small class="text-muted">Real-time meteorological observations persisted in Supabase PostgreSQL for every location searched.</small>
+              </div>
+              <button id="btnRefreshTrackedLocations" class="btn-export-csv">
+                <span>🔄</span> <span>Refresh Telemetry Stream</span>
+              </button>
+            </div>
+
+            <div class="tracked-table-wrapper">
+              <table class="data-table tracked-table">
+                <thead>
+                  <tr>
+                    <th>Observation Time</th>
+                    <th>Location / District</th>
+                    <th>Coordinates</th>
+                    <th>Surface Temp</th>
+                    <th>Humidity</th>
+                    <th>Pressure</th>
+                    <th>Rain Prob</th>
+                    <th>AQI</th>
+                    <th>Road / Research Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="trackedLocationsTableBody">
+                  <tr>
+                    <td colspan="10" style="text-align:center; color: var(--text-secondary); padding: 24px;">Loading tracked meteorological observations from database...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Feature #21: Comparative Research Mode -->
+          <div class="glass-panel research-compare-panel">
+            <div class="section-title-box">
+              <h2>🔬 Comparative Research Studio (Multi-Location Thermodynamic Diagnostics)</h2>
+            </div>
+            <p class="research-subtitle">Compare live meteorological telemetry between the active location and any previously tracked location or regional observatory.</p>
+
+            <div class="compare-inputs-row">
+              <div class="compare-input-group">
+                <label>Primary Location:</label>
+                <select id="compareCityA">
+                  <option value="current" selected>Active Searched Location</option>
+                </select>
+              </div>
+
+              <div class="compare-input-group">
+                <label>Benchmark Location:</label>
+                <select id="compareCityB">
+                  <!-- Populated dynamically with tracked locations from database -->
+                </select>
+              </div>
+
+              <button id="btnRunCityCompare" class="btn-run-compare">Compare Locations</button>
+            </div>
+
+            <div class="compare-table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Atmospheric / Physical Parameter</th>
+                    <th>Primary Location Value</th>
+                    <th>Benchmark Location Value</th>
+                    <th>Meteorological Variance / Delta</th>
+                  </tr>
+                </thead>
+                <tbody id="compareResultsTableBody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="compareSynthesisText" class="compare-synthesis-box">
+              Select locations and click "Compare Locations" to generate comparative thermodynamic diagnostics.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 7: KNOWLEDGE & DATA SOURCES ================= -->
+      <section id="tab-knowledge" class="tab-view-section">
+        <div style="display:flex; flex-direction:column; gap:24px;">
+          
+          <!-- Scientific Concepts Encyclopedia -->
+          <div class="glass-panel">
+            <div class="section-title-box">
+              <h2>📚 Meteorological Knowledge Mode (Scientific Explanations)</h2>
+            </div>
+            <p style="font-size:13.5px; color:#cbd5e1; margin-bottom:18px;">
+              Learn how atmospheric dynamics work with multi-tiered explanations: Simple, Detailed, and Technical formulations.
+            </p>
+            <div id="knowledgeTopicsList" class="knowledge-grid"></div>
+          </div>
+
+          <!-- Feature #22: Data Source Transparency -->
+          <div class="glass-panel">
+            <div class="section-title-box">
+              <h2>🗂️ Meteorological Data Source Transparency & Provenance</h2>
+            </div>
+            <div class="compare-table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Data Feed / Instrument</th>
+                    <th>Spatial / Radial Resolution</th>
+                    <th>Refresh Cadence</th>
+                    <th>Historical Accuracy Score</th>
+                  </tr>
+                </thead>
+                <tbody id="dataSourceTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Feature #16: Disaster Situation Mode Emergency Full-Screen HUD Overlay -->
+    <div id="disasterSituationHUD" class="disaster-hud-overlay">
+      <div class="disaster-hud-container">
+        
+        <div class="disaster-hud-top-banner">
+          <div class="disaster-banner-left">
+            <div class="emergency-beacon-ring"></div>
+            <div>
+              <h2 id="disasterHudHeadline">🚨 EMERGENCY WEATHER ALERT ACTIVE</h2>
+              <p id="disasterHudAlertLevel">SEVERE WARNING — DISASTER RESPONSE PROTOCOLS ENGAGED</p>
+            </div>
+          </div>
+          <button id="btnCloseDisasterHUD" class="btn-close-hud">Exit Emergency HUD ✕</button>
+        </div>
+
+        <div class="disaster-hud-grid">
+          
+          <!-- Emergency Contacts Panel -->
+          <div class="hud-panel">
+            <h3>📞 National & State Emergency Helplines</h3>
+            <div id="disasterContactsList" class="contacts-pills-list"></div>
+          </div>
+
+          <!-- Designated Shelters Panel -->
+          <div class="hud-panel">
+            <h3>📍 Nearby Designated Relief Shelters</h3>
+            <div id="disasterSheltersList" class="shelters-list"></div>
+          </div>
+
+        </div>
+
+        <!-- Emergency Survival Checklist -->
+        <div class="hud-panel survival-checklist-box">
+          <h3>🛡️ Immediate Disaster Survival Protocols</h3>
+          <ul id="disasterSurvivalList"></ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Feature #17: Voice Listening Modal -->
+    <div id="voiceListeningModal" class="voice-modal-backdrop" style="display: none;">
+      <div class="voice-modal-dialog">
+        <button id="btnCloseVoiceModal" class="btn-close-modal">✕</button>
+        <div class="brand-logo-badge" style="width:60px; height:60px; font-size:32px;">🎙️</div>
+        <h3 style="font-family:var(--font-display); font-size:18px; color:#fff;">WeatherGPT Voice Assistant</h3>
+        
+        <div class="voice-wave-container">
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+          <div class="audio-bar"></div>
+        </div>
+
+        <div id="voiceTranscriptDisplay" class="voice-transcript-text">
+          Listening to your weather question...
+        </div>
+        <small style="color:var(--text-muted); font-size:11px;">Speak clearly in English, Hindi, Telugu, Tamil, or any supported Indian language.</small>
+      </div>
+    </div>
+
+    <!-- Feature: Supabase PostgreSQL Authentication Modal -->
+    <div id="authModalBackdrop" class="auth-modal-backdrop" style="display: none;">
+      <div class="auth-modal-dialog">
+        <button id="btnCloseAuthModal" class="btn-close-modal" title="Close">✕</button>
+
+        <div class="auth-modal-header">
+          <div class="auth-brand-badge">⚡</div>
+          <div>
+            <h3 class="auth-modal-title">WeatherGPT Cloud Access</h3>
+            <p class="auth-modal-subtitle">Directly Synced to Supabase PostgreSQL</p>
+          </div>
+        </div>
+
+        <!-- Live Supabase Connectivity Badge -->
+        <div id="supabaseStatusBadge" class="supabase-status-badge online">
+          <span class="status-dot online"></span>
+          <span>Supabase PostgreSQL: Connected</span>
+        </div>
+
+        <!-- Auth Navigation Tabs -->
+        <div class="auth-tabs">
+          <button type="button" id="authTabLogin" class="auth-tab-btn active">Sign In</button>
+          <button type="button" id="authTabRegister" class="auth-tab-btn">Create Account</button>
+        </div>
+
+        <!-- Dynamic Error Banner -->
+        <div id="authModalError" class="auth-modal-error" style="display: none;"></div>
+
+        <!-- Tab 1: Sign In Form -->
+        <form id="authFormLogin" class="auth-form">
+          <div class="auth-field">
+            <label for="loginEmail">Email Address</label>
+            <div class="auth-input-wrapper">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="loginEmail" placeholder="your.name@meteorology.org" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="loginPassword">Password</label>
+            <div class="auth-input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+          </div>
+
+          <button type="submit" id="btnLoginSubmit" class="btn-auth-submit">
+            <span>⚡ Sign In with Supabase</span>
+          </button>
+
+          <div class="auth-guest-divider">
+            <span>OR</span>
+          </div>
+
+          <button type="button" class="btn-guest-enter" id="btnGuestEnterLogin">
+            <span>Continue as Guest Preview →</span>
+          </button>
+
+          <div class="auth-form-footer">
+            <span>Need an account?</span>
+            <a href="#" id="linkGoRegister">Create one now</a>
+          </div>
+        </form>
+
+        <!-- Tab 2: Register Form -->
+        <form id="authFormRegister" class="auth-form" style="display: none;">
+          <div class="auth-field">
+            <label for="registerName">Full Name / Title</label>
+            <div class="auth-input-wrapper">
+              <span class="input-icon">👤</span>
+              <input type="text" id="registerName" placeholder="Dr. Kalyan" required autocomplete="name" />
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="registerEmail">Email Address</label>
+            <div class="auth-input-wrapper">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="registerEmail" placeholder="kalyan@weathergpt.io" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="registerPassword">Password (Min. 6 Characters)</label>
+            <div class="auth-input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="registerPassword" placeholder="Create strong password" minlength="6" required autocomplete="new-password" />
+            </div>
+          </div>
+
+          <div class="auth-field-grid">
+            <div class="auth-field">
+              <label for="registerLocation">Default Base City</label>
+              <select id="registerLocation" class="auth-select">
+                <option value="Bengaluru" selected>Bengaluru (920m ASL)</option>
+                <option value="Mumbai">Mumbai (Coastal Konkan)</option>
+                <option value="New Delhi">New Delhi (Gangetic Plain)</option>
+                <option value="Hyderabad">Hyderabad (Deccan)</option>
+                <option value="Chennai">Chennai (Coromandel)</option>
+                <option value="Kolkata">Kolkata (Bengal Delta)</option>
+                <option value="Pune">Pune (Western Ghats)</option>
+                <option value="Ahmedabad">Ahmedabad (Semi-Arid)</option>
+                <option value="Jaipur">Jaipur (Thar Margin)</option>
+                <option value="Kochi">Kochi (Malabar Coast)</option>
+                <option value="Shimla">Shimla (Himalayan 2276m)</option>
+              </select>
+            </div>
+
+            <div class="auth-field">
+              <label for="registerLanguage">Preferred Language</label>
+              <select id="registerLanguage" class="auth-select">
+                <option value="en" selected>English</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="ml">മലയാളം (Malayalam)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" id="btnRegisterSubmit" class="btn-auth-submit">
+            <span>🚀 Create Meteorological Account</span>
+          </button>
+
+          <div class="auth-guest-divider">
+            <span>OR</span>
+          </div>
+
+          <button type="button" class="btn-guest-enter" id="btnGuestEnterRegister">
+            <span>Continue as Guest Preview →</span>
+          </button>
+
+          <div class="auth-form-footer">
+            <span>Already have an account?</span>
+            <a href="#" id="linkGoLogin">Sign In</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    </div>
+
+  </div>
+
+  <!-- Leaflet Map JS Library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- WeatherGPT Application Module -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
